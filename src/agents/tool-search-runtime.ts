@@ -31,7 +31,6 @@ import {
   MAX_TOOL_SEARCH_BATCH_QUERIES,
   MAX_TOOL_SEARCH_BATCH_QUERY_BYTES,
   MAX_TOOL_SEARCH_BATCH_QUERY_GRAPHEMES,
-  MAX_TOOL_SEARCH_QUERY_GRAPHEMES,
   MAX_TOOL_SEARCH_RESULTS,
   type CatalogSource,
   type CatalogVisibilityOptions,
@@ -218,12 +217,12 @@ function readToolSearchLimit(value: unknown, config: ToolSearchConfig): number {
   return Math.min(value, config.maxSearchLimit);
 }
 
-function readToolSearchQuery(value: unknown, field: string, maxGraphemes: number): string {
+function readToolSearchQuery(value: unknown, field: string, maxGraphemes?: number): string {
   if (typeof value !== "string" || !value.trim()) {
     throw new ToolInputError(`${field} must be a non-empty string.`);
   }
   const query = value.trim();
-  if (!Guard.IsMaxLength(query, maxGraphemes)) {
+  if (maxGraphemes !== undefined && !Guard.IsMaxLength(query, maxGraphemes)) {
     throw new ToolInputError(`${field} must not exceed ${maxGraphemes} characters.`);
   }
   return query;
@@ -234,7 +233,7 @@ function readToolSearchArgs(
   config: ToolSearchConfig,
 ): { query: string; limit: number } {
   const params = asToolParamsRecord(args);
-  const query = readToolSearchQuery(params.query, "query", MAX_TOOL_SEARCH_QUERY_GRAPHEMES);
+  const query = readToolSearchQuery(params.query, "query");
   const options = isRecord(params.options) ? params.options : undefined;
   return {
     query,
