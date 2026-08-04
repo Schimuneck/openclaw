@@ -90,7 +90,6 @@ function buildUserSource(code: string): string {
 function createHostRequestHandler(params: {
   vm: QuickJS;
   pendingRequests: PendingBridgeRequest[];
-  config: CodeModeConfig;
 }): (
   this: JSValueHandle,
   method: JSValueHandle,
@@ -98,9 +97,6 @@ function createHostRequestHandler(params: {
   bridgeId?: JSValueHandle,
 ) => JSValueHandle {
   return (methodHandle, argsHandle, bridgeIdHandle) => {
-    if (params.pendingRequests.length >= params.config.maxPendingToolCalls) {
-      throw new Error("too many pending code mode tool calls");
-    }
     const method = methodHandle.toString();
     if (
       method !== "search" &&
@@ -182,7 +178,6 @@ async function createVm(params: {
     createHostRequestHandler({
       vm,
       pendingRequests: params.pendingRequests,
-      config: params.config,
     }),
   ).consume((hostRequest) => vm.global.setProp("__openclawHostRequest", hostRequest));
   vm.evalCode(CODE_MODE_CONTROLLER_SOURCE, "openclaw-code-mode:controller.js").dispose();
@@ -213,7 +208,6 @@ async function restoreVm(params: {
     createHostRequestHandler({
       vm,
       pendingRequests: params.pendingRequests,
-      config: params.config,
     }),
   );
   return { vm, didTimeout: () => timedOut || deadlineReached() };

@@ -260,6 +260,9 @@ enable the feature on its own.
 | `searchDefaultLimit`  | `8`                            | clamped to `maxSearchLimit`                     |
 | `maxSearchLimit`      | `50`                           | `1`-`50`                                        |
 
+`maxPendingToolCalls` limits active host execution of nested calls for each
+code-mode run. Accepted calls above the limit queue until a slot opens.
+
 If code mode is enabled but QuickJS-WASI cannot load, OpenClaw fails closed
 for that run; it does not silently expose normal tools as a fallback. This
 holds for `true` and for `"auto"` runs where the model resolves as preferred:
@@ -885,7 +888,8 @@ Nested calls project into the transcript as real tool calls so support
 bundles show what happened, with the projection identifying the parent
 code-mode tool call and the nested tool id.
 
-Parallel nested calls are allowed up to `maxPendingToolCalls`.
+The host executes up to `maxPendingToolCalls` nested calls concurrently for
+each code-mode run. Accepted calls above the limit queue until a slot opens.
 
 ## Run and snapshot lifecycle
 
