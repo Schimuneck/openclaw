@@ -26,7 +26,13 @@ describe("Code Mode restart-safe replay", () => {
 
   it("keeps restart-safe mode across audited core reads", async () => {
     const targetTool = fakeTool("read", "Read");
-    const { config, catalogRef, tools: codeModeTools } = createCodeModeHarness();
+    const {
+      config,
+      catalogRef,
+      tools: codeModeTools,
+    } = createCodeModeHarness({
+      forceRestartSafeTools: true,
+    });
     applyCodeModeCatalog({
       tools: [...codeModeTools, targetTool],
       config,
@@ -40,7 +46,6 @@ describe("Code Mode restart-safe replay", () => {
       await expectDefined(codeModeTools[0], "codeModeTools[0] test invariant").execute(
         "code-call-replay-safety",
         {
-          restartSafe: true,
           code: `
           const matches = await tools.search(${JSON.stringify(targetTool.name)});
           return await tools.call(matches[0].id, {});
@@ -78,7 +83,13 @@ describe("Code Mode restart-safe replay", () => {
       optional: true,
       replaySafe: true,
     });
-    const { config, catalogRef, tools: codeModeTools } = createCodeModeHarness();
+    const {
+      config,
+      catalogRef,
+      tools: codeModeTools,
+    } = createCodeModeHarness({
+      forceRestartSafeTools: true,
+    });
     applyCodeModeCatalog({
       tools: [...codeModeTools, targetTool],
       config,
@@ -91,7 +102,6 @@ describe("Code Mode restart-safe replay", () => {
     const completed = await runUntilCompleted({
       execTool: expectDefined(codeModeTools[0], "codeModeTools[0] test invariant"),
       waitTool: expectDefined(codeModeTools[1], "codeModeTools[1] test invariant"),
-      restartSafe: true,
       code: `
         const matches = await tools.search("fake_plugin_read");
         return await tools.call(matches[0].id, {});
@@ -120,7 +130,13 @@ describe("Code Mode restart-safe replay", () => {
         operation: "tool",
       },
     });
-    const { config, catalogRef, tools: codeModeTools } = createCodeModeHarness();
+    const {
+      config,
+      catalogRef,
+      tools: codeModeTools,
+    } = createCodeModeHarness({
+      forceRestartSafeTools: true,
+    });
     applyCodeModeCatalog({
       tools: [...codeModeTools, targetTool],
       config,
@@ -133,7 +149,6 @@ describe("Code Mode restart-safe replay", () => {
     const completed = await runUntilCompleted({
       execTool: expectDefined(codeModeTools[0], "codeModeTools[0] test invariant"),
       waitTool: expectDefined(codeModeTools[1], "codeModeTools[1] test invariant"),
-      restartSafe: true,
       code: 'return await MCP.github.readFile({ path: "README.md" });',
     });
 
@@ -145,7 +160,13 @@ describe("Code Mode restart-safe replay", () => {
 
   it("rejects side-effecting calls before executing them in restart-safe mode", async () => {
     const targetTool = pluginTool("fake_write", "Write");
-    const { config, catalogRef, tools: codeModeTools } = createCodeModeHarness();
+    const {
+      config,
+      catalogRef,
+      tools: codeModeTools,
+    } = createCodeModeHarness({
+      forceRestartSafeTools: true,
+    });
     applyCodeModeCatalog({
       tools: [...codeModeTools, targetTool],
       config,
@@ -159,7 +180,6 @@ describe("Code Mode restart-safe replay", () => {
       await expectDefined(codeModeTools[0], "codeModeTools[0] test invariant").execute(
         "code-call-unsafe-restart",
         {
-          restartSafe: true,
           code: `
           const matches = await tools.search("fake_write");
           return await tools.call(matches[0].id, {});
@@ -189,7 +209,13 @@ describe("Code Mode restart-safe replay", () => {
       replaySafe: true,
     });
     const writeTool = pluginTool("fake_unsafe_write", "Write");
-    const { config, catalogRef, tools: codeModeTools } = createCodeModeHarness();
+    const {
+      config,
+      catalogRef,
+      tools: codeModeTools,
+    } = createCodeModeHarness({
+      forceRestartSafeTools: true,
+    });
     applyCodeModeCatalog({
       tools: [...codeModeTools, readTool, writeTool],
       config,
@@ -202,7 +228,6 @@ describe("Code Mode restart-safe replay", () => {
     const failed = await runUntilCompleted({
       execTool: expectDefined(codeModeTools[0], "codeModeTools[0] test invariant"),
       waitTool: expectDefined(codeModeTools[1], "codeModeTools[1] test invariant"),
-      restartSafe: true,
       code: `
         const reads = await tools.search("fake_safe_read");
         await tools.call(reads[0].id, {});
@@ -220,6 +245,36 @@ describe("Code Mode restart-safe replay", () => {
     expect(failed.error).toContain("cannot call side-effecting tools");
     expect(readTool.execute).toHaveBeenCalledTimes(1);
     expect(writeTool.execute).not.toHaveBeenCalled();
+  });
+
+  it("ignores raw model restartSafe input outside host recovery", async () => {
+    const targetTool = pluginTool("fake_model_write", "Write");
+    const { config, catalogRef, tools: codeModeTools } = createCodeModeHarness();
+    applyCodeModeCatalog({
+      tools: [...codeModeTools, targetTool],
+      config,
+      sessionId: "session-code-mode",
+      sessionKey: "agent:main:main",
+      runId: "run-code-mode",
+      catalogRef,
+    });
+
+    const completed = resultDetails(
+      await expectDefined(codeModeTools[0], "codeModeTools[0] test invariant").execute(
+        "code-call-raw-restart-safe",
+        {
+          restartSafe: true,
+          code: `
+            const matches = await tools.search("fake_model_write");
+            return await tools.call(matches[0].id, {});
+          `,
+        },
+      ),
+    );
+
+    expect(completed.status).toBe("completed");
+    expect(completed.replaySafe).toBe(false);
+    expect(targetTool.execute).toHaveBeenCalledTimes(1);
   });
 
   it("keeps host-forced restart safety when the model clears the exec flag", async () => {

@@ -39,7 +39,6 @@ describe("Code Mode wait, scope, and suspended runs", () => {
       await expectDefined(codeModeTools[0], "codeModeTools[0] test invariant").execute(
         "code-call-yield",
         {
-          restartSafe: true,
           code: `
           text("before");
           await yield_control("pause");
@@ -52,7 +51,7 @@ describe("Code Mode wait, scope, and suspended runs", () => {
 
     expect(first.status).toBe("waiting");
     expect(first.reason).toBe("yield");
-    expect(first.replaySafe).toBe(true);
+    expect(first.replaySafe).toBe(false);
     expect(first.output).toEqual([{ type: "text", text: "before" }]);
 
     const runId = first.runId;
